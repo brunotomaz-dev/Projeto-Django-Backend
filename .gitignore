@@ -1,3 +1,4 @@
+# cSpell: disable
 # Django stuff:
 *.log
 *.pot
@@ -74,4 +75,4 @@ node_modules/
 .env
 
 # venv
-.venv_django/
+.venv*
