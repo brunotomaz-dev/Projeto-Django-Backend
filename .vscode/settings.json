@@ -1,0 +1,29 @@
+{
+  "cSpell.words": [
+    "apscheduler",
+    "asof",
+    "astype",
+    "automacao",
+    "bfill",
+    "corsheaders",
+    "cumsum",
+    "dataframe",
+    "dataframes",
+    "downcasting",
+    "dropna",
+    "ffill",
+    "fillna",
+    "filterset",
+    "infoihm",
+    "isin",
+    "jobstores",
+    "maquinaihm",
+    "maquinainfo",
+    "qualidadeihm",
+    "recno",
+    "simplejwt",
+    "sqlserver",
+    "TOTVSDB",
+    "viewsets"
+  ]
+}
