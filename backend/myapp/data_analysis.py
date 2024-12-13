@@ -80,6 +80,41 @@ class InfoIHMJoin:
         self.df_info = df_info
         self.clean_data = CleanData()
 
+    @staticmethod
+    def __line_adjust(df_ihm: pd.DataFrame, df: pd.DataFrame) -> pd.DataFrame:
+        # Cria um dicionário maquina/linha
+        maq_line_dict = dict(zip(df_ihm["maquina_id"], df_ihm["linha"]))
+        maq_fab_dict = dict(zip(df_ihm["maquina_id"], df_ihm["fabrica"]))
+
+        df["linha"] = df["linha"].fillna(df["maquina_id"].map(maq_line_dict))
+        df["fabrica"] = df["fabrica"].fillna(df["maquina_id"].map(maq_fab_dict))
+
+        return df
+
+    # @staticmethod
+    # def __line_adjust_date_opt(df_ihm: pd.DataFrame, df: pd.DataFrame) -> pd.DataFrame:
+    #     maq_line_map = df_ihm[
+    #         ["data_registro", "maquina_id", "linha", "fabrica"]
+    #         ].drop_duplicates()
+
+    #     df = pd.merge_asof(
+    #         df,
+    #         maq_line_map,
+    #         on="data_registro",
+    #         by="maquina_id",
+    #         direction="nearest",
+    #         suffixes=("", "_aux"),
+    #     )
+
+    #     # Preencher linhas vazias
+    #     df["linha"] = df["linha"].fillna(df["linha_aux"])
+    #     df["fabrica"] = df["fabrica"].fillna(df["fabrica_aux"])
+
+    #     # Remover coluna auxiliar
+    #     df = df.drop(["linha_aux", "fabrica_aux"], axis=1)
+
+    #     return df
+
     def join_data(self) -> pd.DataFrame:
         """Une os DataFrames de info e ihm."""
 
@@ -115,8 +150,14 @@ class InfoIHMJoin:
             on="data_hora",
             by="maquina_id",
             direction="nearest",
-            tolerance=pd.Timedelta("3 min 30 s"),
+            tolerance=pd.Timedelta("2 min"),
         )
+
+        # Ajuste de Linha que não leva em conta a data
+        df = self.__line_adjust(df_ihm, df)
+
+        # NOTE A ser usado em casos que precisa levar em conta a data
+        # df = self.__line_adjust_date_opt(df_ihm, df)
 
         # Define o tipo para colunas de ciclos e produção
         df.contagem_total_ciclos = df.contagem_total_ciclos.astype("Int64")
@@ -179,6 +220,9 @@ class InfoIHMJoin:
         # ========= Ajusta A Data Hora E Data Hora Final Para O Timezone Correto Para Salvar No Db #
         df.data_hora = df.data_hora.apply(make_aware)
         df.data_hora_final = df.data_hora_final.apply(make_aware)
+
+        df.data_registro_ihm = df.data_registro_ihm.fillna(df.data_registro)
+        df.hora_registro_ihm = df.hora_registro_ihm.fillna(df.hora_registro)
 
         return df
 

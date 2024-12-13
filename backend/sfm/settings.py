@@ -36,6 +36,7 @@ ALLOWED_HOSTS = [
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Adicione o endereço do seu frontend
+    "http://localhost:8501",
 ]
 
 
