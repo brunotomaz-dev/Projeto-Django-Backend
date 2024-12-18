@@ -15,15 +15,17 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .data_analysis import CleanData
 from .filters import (
+    EficienciaFilter,
     InfoIHMFilter,
     MaquinaIHMFilter,
     MaquinaInfoFilter,
     QualidadeIHMFilter,
     QualProdFilter,
 )
-from .models import InfoIHM, MaquinaIHM, MaquinaInfo, QualidadeIHM, QualProd
+from .models import Eficiencia, InfoIHM, MaquinaIHM, MaquinaInfo, QualidadeIHM, QualProd
 from .serializers import (
     CustomTokenObtainPairSerializer,
+    EficienciaSerializer,
     InfoIHMSerializer,
     MaquinaIHMSerializer,
     MaquinaInfoSerializer,
@@ -195,12 +197,56 @@ class QualidadeIHMViewSet(viewsets.ModelViewSet):
 
 
 class QualProdViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gerenciamento de Produtos Qualificados (QualProd).
+    Este ViewSet fornece operações CRUD completas para o modelo QualProd,
+    com autenticação JWT e permissões de acesso restritas a usuários autenticados.
+    Attributes:
+        queryset: QuerySet contendo todos os objetos QualProd
+        serializer_class: Classe serializadora para conversão de objetos QualProd
+        filter_backends: Lista de backends de filtro utilizados
+        filterset_class: Classe de filtro personalizada para QualProd
+        permission_classes: Classes de permissão requeridas
+        authentication_classes: Classes de autenticação utilizadas
+    Métodos HTTP suportados:
+        - GET: Listar/Recuperar produtos qualificados
+        - POST: Criar novo produto qualificado
+        - PUT/PATCH: Atualizar produto qualificado existente
+        - DELETE: Remover produto qualificado
+    """
 
     # pylint: disable=E1101
     queryset = QualProd.objects.all()
     serializer_class = QualProdSerializer
     filter_backends = [DjangoFilterBackend]
     filterset_class = QualProdFilter
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+
+class EficienciaViewSet(viewsets.ModelViewSet):  # cSpell: words eficiencia
+    """
+    ViewSet para gerenciamento de registros de Eficiência.
+    Este ViewSet fornece operações CRUD (Create, Read, Update, Delete) para o modelo Eficiencia.
+    Inclui filtragem, autenticação JWT e requer que o usuário esteja autenticado.
+    Atributos:
+        queryset: Conjunto de dados contendo todos os registros de Eficiencia.
+        serializer_class: Classe serializadora para converter objetos Eficiencia em JSON.
+        filter_backends: Define DjangoFilterBackend como backend de filtragem.
+        filterset_class: Classe que define os campos filtráveis do modelo.
+        permission_classes: Define que apenas usuários autenticados podem acessar os endpoints.
+        authentication_classes: Utiliza autenticação JWT (JSON Web Token).
+    Métodos HTTP suportados:
+        - GET: Listar/Recuperar registros de Eficiencia
+        - POST: Criar novo registro de Eficiencia
+        - PUT/PATCH: Atualizar registro de Eficiencia existente
+        - DELETE: Remover registro de Eficiencia
+    """
+
+    queryset = Eficiencia.objects.all()  # pylint: disable=E1101
+    serializer_class = EficienciaSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = EficienciaFilter
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
 

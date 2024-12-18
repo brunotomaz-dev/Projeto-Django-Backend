@@ -1,10 +1,23 @@
 """Módulo com classes de análise de dados"""
 
+from datetime import datetime
+
 import numpy as np
 import pandas as pd
 from django.utils.timezone import make_aware
 
-from .utils import TEMPO_AJUSTE
+from .utils import (
+    AF_REP,
+    CICLOS_BOLINHA,
+    CICLOS_ESPERADOS,
+    DESC_EFF,
+    DESC_PERF,
+    DESC_REP,
+    NOT_EFF,
+    NOT_PERF,
+    TEMPO_AJUSTE,
+    IndicatorType,
+)
 
 pd.set_option("future.no_silent_downcasting", True)
 
@@ -512,7 +525,7 @@ class InfoIHMJoin:
 
 
 # ================================================================================================ #
-#                                      INDICADORES DE PRODUÇÃO                                     #
+#                                             PRODUÇÃO                                             #
 # ================================================================================================ #
 def clean_hora_registro(hora_str: str):
     """
@@ -609,3 +622,287 @@ def join_qual_prod(prod: pd.DataFrame, qual: pd.DataFrame):
     df.bdj_retrabalho = df.bdj_retrabalho.astype(int)
 
     return df
+
+
+# ================================================================================================ #
+#                                      INDICADORES DE PRODUÇÃO                                     #
+# ================================================================================================ #
+
+
+class ProductionIndicators:
+    """Classe responsável por gerar indicadores de produção"""
+
+    def __init__(self) -> None:
+        pass
+
+    @staticmethod
+    def __calculate_discount_time(
+        df: pd.DataFrame,
+        desc_dict: dict[str, int],
+        skip_list: list[str],
+        indicator: IndicatorType,
+    ) -> pd.DataFrame:
+        """Calcula o tempo de desconto"""
+        df = df.copy()
+
+        # Cria coluna de desconto
+        df["desconto"] = 0
+
+        # Lidar com situações que não afetam o indicador
+        mask = df[["motivo", "problema", "causa"]].apply(lambda x: x.isin(skip_list).any(), axis=1)
+        df.loc[mask, "desconto"] = 0 if indicator == IndicatorType.REPAIR else df["tempo"]
+
+        # Cria um dict para indicadores
+        indicator_dict = {
+            IndicatorType.EFFICIENCY: df,
+            IndicatorType.PERFORMANCE: df[~mask],
+            IndicatorType.REPAIR: df[mask],
+        }
+
+        df = indicator_dict[indicator].reset_index(drop=True)
+
+        # Aplica o desconto de acordo com as colunas "motivo" ou "problema" ou "causa"
+        for key, value in desc_dict.items():
+            mask = (
+                df[["motivo", "problema", "causa"]]
+                .apply(lambda x, key=key: x.str.contains(key, case=False, na=False))
+                .any(axis=1)
+            )
+            df.loc[mask, "desconto"] = value
+
+        # Caso o desconto seja maior que o tempo, o desconto deve ser igual ao tempo
+        df.loc[:, "desconto"] = df[["desconto", "tempo"]].min(axis=1)
+
+        # Calcula o excedente, sendo o valor mínimo 0
+        df.loc[:, "excedente"] = (df.tempo - df.desconto).clip(lower=0)
+
+        return df
+
+    @staticmethod
+    def __get_elapsed_time(turno: str) -> int:
+        """
+        Calcula o tempo decorrido.
+
+        """
+        # Agora
+        now = datetime.now()
+
+        if turno == "MAT" and 8 <= now.hour < 16:
+            elapsed_time = now - datetime(now.year, now.month, now.day, 8, 0, 0)
+        elif turno == "VES" and 16 <= now.hour < 24:
+            elapsed_time = now - datetime(now.year, now.month, now.day, 16, 0, 0)
+        elif turno == "NOT" and 0 <= now.hour < 8:
+            elapsed_time = now - datetime(now.year, now.month, now.day, 0, 0, 0)
+        else:
+            return 480
+
+        return elapsed_time.total_seconds() / 60
+
+    def __get_expected_production_time(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Calcula o tempo esperado de produção.
+        """
+        df["tempo_esperado"] = df.apply(
+            lambda row: max(
+                1,
+                (
+                    np.floor(self.__get_elapsed_time(row.turno) - row.desconto)
+                    if row.data_registro.date() == pd.to_datetime("today").date()
+                    else 480 - row.desconto
+                ),
+            ),
+            axis=1,
+        )
+
+        return df
+
+    def create_indicators(
+        self, info: pd.DataFrame, prod: pd.DataFrame, indicator: IndicatorType
+    ) -> pd.DataFrame:
+        """Cria indicadores de produtividade"""
+
+        df_info = info.copy()
+        df_prod = prod.copy()
+
+        # Separa onde está parada
+        df_stops = df_info[df_info.status == "parada"]
+        # Reinicia o index
+        df_stops = df_stops.reset_index(drop=True)
+
+        # Dict com os descontos
+        desc_dict = {
+            IndicatorType.EFFICIENCY: DESC_EFF,
+            IndicatorType.PERFORMANCE: DESC_PERF,
+            IndicatorType.REPAIR: DESC_REP,
+        }[indicator]
+
+        skip_dict = {
+            IndicatorType.EFFICIENCY: NOT_EFF,
+            IndicatorType.PERFORMANCE: NOT_PERF,
+            IndicatorType.REPAIR: AF_REP,
+        }[indicator]
+
+        # Ajuste de parada programada para perf e reparos para ser np.nan - Feito nos ajustes
+        paradas_programadas = pd.Series()
+        if indicator != IndicatorType.EFFICIENCY:
+            mask = (df_stops.causa.isin(["Sem Produção", "Backup"])) & (df_stops.tempo >= 478)
+            paradas_programadas = df_stops[mask][["data_registro", "turno", "linha"]]
+
+        # ================================== Calcula O Indicador ================================= #
+        # Calcula o tempo de desconto
+        df_stops = self.__calculate_discount_time(df_stops, desc_dict, skip_dict, indicator)
+
+        # Agrupa para ter o valor total de tempo e de desconto
+        df_stops = (
+            df_stops.groupby(["maquina_id", "linha", "data_registro", "turno"], observed=False)
+            .agg(
+                tempo=("tempo", "sum"),
+                desconto=("desconto", "sum"),
+                excedente=("excedente", "sum"),
+            )
+            .reset_index()
+        )
+
+        # Ajusta a data por garantia
+        df_stops.data_registro = pd.to_datetime(df_stops.data_registro)
+        df_prod.data_registro = pd.to_datetime(df_prod.data_registro)
+
+        # Une os dois dataframes
+        df = pd.merge(
+            df_prod,
+            df_stops,
+            how="left",
+            on=["maquina_id", "linha", "data_registro", "turno"],
+        )
+
+        # Preenche os valores nulos
+        df = df.fillna(0)
+
+        # Nova coluna para o tempo esperado de produção
+        df = self.__get_expected_production_time(df)
+
+        # Dict de funções para ajustes dos indicadores
+        indicator_adjustment_functions = {
+            IndicatorType.EFFICIENCY: self.__eff_adjust,
+            IndicatorType.PERFORMANCE: self.__adjust,
+            IndicatorType.REPAIR: self.__adjust,
+        }[indicator]
+
+        # Ajusta o indicador
+        if indicator != IndicatorType.EFFICIENCY:
+            df: pd.DataFrame = indicator_adjustment_functions(df, indicator, paradas_programadas)
+        else:
+            df: pd.DataFrame = indicator_adjustment_functions(df, indicator)
+
+        df["fabrica"] = df.linha.apply(lambda x: 1 if x in range(1, 10) else 2)
+
+        # Transformar algumas colunas em inteiro
+        df.tempo = df.tempo.astype(int)
+        df.desconto = df.desconto.astype(int)
+        df.excedente = df.excedente.astype(int)
+        df.tempo_esperado = df.tempo_esperado.astype(int)
+        df.total_produzido = df.total_produzido.astype(int)
+        if indicator == IndicatorType.EFFICIENCY:
+            df.producao_esperada = df.producao_esperada.astype(int)
+
+        # Ajustar a ordem das colunas
+        cols_eff = [
+            "fabrica",
+            "linha",
+            "maquina_id",
+            "turno",
+            "data_registro",
+            "tempo",
+            "desconto",
+            "excedente",
+            "tempo_esperado",
+            "total_produzido",
+            "producao_esperada",  # Cspell: words producao
+            indicator.value,
+        ]
+
+        cols = [
+            "fabrica",
+            "linha",
+            "maquina_id",
+            "turno",
+            "data_registro",
+            "tempo",
+            "desconto",
+            "excedente",
+            "tempo_esperado",
+            indicator.value,
+        ]
+
+        return df[cols] if indicator != IndicatorType.EFFICIENCY else df[cols_eff]
+
+    @staticmethod
+    def __eff_adjust(df: pd.DataFrame, indicator: IndicatorType) -> pd.DataFrame:
+        """
+        Ajusta o indicador de eficiência.
+        """
+
+        # Variável para identificar quando o produto possui a palavra " BOL "
+        mask_bolinha = df["produto"].str.contains("BOL ")
+
+        # Nova coluna para o tempo esperado de produção
+        df["producao_esperada"] = round(
+            df["tempo_esperado"] * (CICLOS_BOLINHA * 2) * mask_bolinha
+            + df["tempo_esperado"] * (CICLOS_ESPERADOS * 2) * ~mask_bolinha,
+            0,
+        )
+
+        # Coluna de eficiência
+        df[indicator.value] = (df.total_produzido / df.producao_esperada).round(3)
+
+        # Corrige os valores nulos ou incorretos
+        df[indicator.value] = df[indicator.value].replace([np.inf, -np.inf], np.nan).fillna(0)
+
+        # Ajustar a eficiência para np.nan se produção esperada for 0
+        mask = (df.producao_esperada == 0) & (df[indicator.value] == 0)
+        df.loc[mask, indicator.value] = np.nan
+
+        # Corrigir a eficiência para 0 caso seja negativa
+        df[indicator.value] = np.where(df[indicator.value] < 0, 0, df[indicator.value])
+
+        # Ajustar eficiência para tempo de produção esperado menor que 10
+        mask = df.tempo_esperado < 10
+        df.loc[mask, indicator.value] = np.nan
+        df.loc[mask, "producao_esperada"] = 0
+        df.loc[mask, "tempo_esperado"] = 0
+
+        return df
+
+    @staticmethod
+    def __adjust(
+        df: pd.DataFrame, indicador: IndicatorType, paradas_programadas: pd.Series
+    ) -> pd.DataFrame:
+        """
+        Ajusta os indicadores de performance e reparos.
+        """
+
+        # Coluna do indicador
+        df[indicador.value] = (df.excedente / df.tempo_esperado).round(3)
+
+        # Corrige os valores nulos ou incorretos
+        df[indicador.value] = df[indicador.value].replace([np.inf, -np.inf], np.nan).fillna(0)
+
+        # Ajuste para paradas programadas
+        paradas_programadas["programada"] = 1
+
+        # Garantir que data_registro seja datetime
+        paradas_programadas.data_registro = pd.to_datetime(paradas_programadas.data_registro)
+        df.data_registro = pd.to_datetime(df.data_registro)
+
+        # Une os dois dataframes
+        df = pd.merge(df, paradas_programadas, how="left", on=["data_registro", "turno", "linha"])
+
+        # np.nan para paradas programadas
+        mask = df.programada == 1
+        df.loc[mask, indicador.value] = np.nan
+        df.loc[mask, "tempo_esperado"] = 0
+
+        # Remove a coluna programada
+        df = df.drop(columns="programada")
+
+        return df

@@ -4,7 +4,15 @@ from django.contrib.auth.models import User
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from .models import InfoIHM, MaquinaCadastro, MaquinaIHM, MaquinaInfo, QualidadeIHM, QualProd
+from .models import (
+    Eficiencia,
+    InfoIHM,
+    MaquinaCadastro,
+    MaquinaIHM,
+    MaquinaInfo,
+    QualidadeIHM,
+    QualProd,
+)
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -115,4 +123,14 @@ class QualProdSerializer(serializers.ModelSerializer):
         """Classe de metadados"""
 
         model = QualProd
+        fields = "__all__"
+
+
+class EficienciaSerializer(serializers.ModelSerializer):
+    """Serializador de dados de eficiência"""
+
+    class Meta:
+        """Classe de metadados"""
+
+        model = Eficiencia  # cSpell:words eficiencia
         fields = "__all__"

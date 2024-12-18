@@ -2,7 +2,7 @@
 
 import django_filters
 
-from .models import InfoIHM, MaquinaIHM, MaquinaInfo, QualidadeIHM, QualProd
+from .models import Eficiencia, InfoIHM, MaquinaIHM, MaquinaInfo, QualidadeIHM, QualProd
 
 
 class MaquinaInfoFilter(django_filters.FilterSet):
@@ -62,4 +62,16 @@ class QualProdFilter(django_filters.FilterSet):
         """Classe de metadados"""
 
         model = QualProd
+        fields = {"data_registro": ["exact", "gt", "lt"]}
+
+
+class EficienciaFilter(django_filters.FilterSet):  # cSpell:ignore Eficiencia
+    """Filtro da eficiência"""
+
+    data_registro = django_filters.DateFilter(field_name="data_registro")
+
+    class Meta:
+        """Classe de metadados"""
+
+        model = Eficiencia
         fields = {"data_registro": ["exact", "gt", "lt"]}

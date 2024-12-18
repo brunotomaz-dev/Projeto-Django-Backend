@@ -8,6 +8,7 @@ from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
 from .views import (
     CustomTokenObtainPairView,
+    EficienciaViewSet,
     InfoIHMViewSet,
     MaquinaIHMViewSet,
     MaquinaInfoProductionViewSet,
@@ -23,6 +24,7 @@ router.register(r"maquinaihm", MaquinaIHMViewSet)
 router.register(r"info_ihm", InfoIHMViewSet)
 router.register(r"qualidade_ihm", QualidadeIHMViewSet)
 router.register(r"qual_prod", QualProdViewSet)
+router.register(r"eficiencia", EficienciaViewSet)  # cSpell:words eficiencia
 
 
 urlpatterns = [

@@ -158,3 +158,29 @@ class QualProd(models.Model):
 
     def __str__(self):
         return f"{self.linha} - {self.data_registro} - {self.produto} - {self.total_produzido}"
+
+
+class Eficiencia(models.Model):
+    """Modelo de informações de eficiência de máquina"""
+
+    recno = models.AutoField(primary_key=True)
+    fabrica = models.SmallIntegerField()
+    linha = models.SmallIntegerField()
+    maquina_id = models.CharField(max_length=8)
+    turno = models.CharField(max_length=3)
+    data_registro = models.DateField()
+    total_ciclos = models.SmallIntegerField()
+    total_produzido_sensor = models.SmallIntegerField()
+    total_produzido = models.SmallIntegerField()
+    tempo_parada = models.SmallIntegerField()
+    tempo_rodando = models.SmallIntegerField()
+    eficiencia = models.FloatField()  # cSpell: words eficiencia
+
+    class Meta:
+        """Definição do nome da tabela"""
+
+        db_table = "analysis_eff"
+        indexes = [models.Index(fields=["data_registro"])]
+
+    def __str__(self):
+        return f"{self.linha} - {self.data_registro} - {self.total_produzido} - {self.eficiencia}"

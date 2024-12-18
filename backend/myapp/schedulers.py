@@ -10,13 +10,16 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from django.db import connections, transaction
 from rest_framework.test import APIRequestFactory
 
-from .data_analysis import InfoIHMJoin, join_qual_prod
-from .models import InfoIHM, QualProd
+from .data_analysis import InfoIHMJoin, ProductionIndicators, join_qual_prod
+from .models import Eficiencia, InfoIHM, QualProd  # cSpell:words eficiencia
+from .utils import IndicatorType
 from .views import (
+    InfoIHMViewSet,
     MaquinaIHMViewSet,
     MaquinaInfoProductionViewSet,
     MaquinaInfoViewSet,
     QualidadeIHMViewSet,
+    QualProdViewSet,
 )
 
 logger = logging.getLogger(__name__)
@@ -59,8 +62,17 @@ def get_new_access_token(refresh_token):
     raise requests.exceptions.RequestException("Não foi possível obter um novo token de acesso")
 
 
-def _get_api_data(factory, endpoint, params, headers, view_set):
+def _get_api_data(endpoint, params, view_set):
     """Obtém dados da API com tratamento de autorizações"""
+    # Acessa o token
+    access_token = get_jwt_token()
+    # Ajusta o headers com o token
+    headers = {
+        "HTTP_AUTHORIZATION": f"Bearer {access_token}",
+        "content_type": "application/json",
+    }
+    # Faz a requisição
+    factory = APIRequestFactory()
     request = factory.get(endpoint, params, **headers)
     response = view_set(request)
 
@@ -94,13 +106,6 @@ def analisar_dados():
     """Função que será executada periodicamente"""
     with lock:
         try:
-            factory = APIRequestFactory()
-            access_token = get_jwt_token()
-            headers = {
-                "HTTP_AUTHORIZATION": f"Bearer {access_token}",
-                "content_type": "application/json",
-            }
-
             params = {"data_registro": pd.Timestamp("today").strftime("%Y-%m-%d")}
             # first_day = now.replace(day=1)
             # last_day = now.replace(day=pd.Period(now, "M").days_in_month)
@@ -115,8 +120,8 @@ def analisar_dados():
             info_view = MaquinaInfoViewSet.as_view({"get": "list"})
             ihm_view = MaquinaIHMViewSet.as_view({"get": "list"})
 
-            info_data = _get_api_data(factory, "/api/maquinainfo/", params, headers, info_view)
-            ihm_data = _get_api_data(factory, "/api/maquinaihm/", params, headers, ihm_view)
+            info_data = _get_api_data("/api/maquinainfo/", params, info_view)
+            ihm_data = _get_api_data("/api/maquinaihm/", params, ihm_view)
 
             if not info_data.empty and not ihm_data.empty:
                 info_ihm_join = InfoIHMJoin(ihm_data, info_data)
@@ -140,23 +145,14 @@ def create_production_data():
     """
     with lock:
         try:
-            factory = APIRequestFactory()
-            access_token = get_jwt_token()
-            headers = {
-                "HTTP_AUTHORIZATION": f"Bearer {access_token}",
-                "content_type": "application/json",
-            }
-
             today = pd.Timestamp("today").strftime("%Y-%m-%d")
 
             params = {"period": f"{today},{today}"}
 
             prod_view = MaquinaInfoProductionViewSet.as_view()
             qual_view = QualidadeIHMViewSet.as_view({"get": "list"})
-            prod_data = _get_api_data(
-                factory, "/api/maquinainfo/production/", params, headers, prod_view
-            )
-            qual_data = _get_api_data(factory, "/api/qualidade_ihm/", params, headers, qual_view)
+            prod_data = _get_api_data("/api/maquinainfo/production/", params, prod_view)
+            qual_data = _get_api_data("/api/qualidade_ihm/", params, qual_view)
 
             if not prod_data.empty and not qual_data.empty:
 
@@ -177,10 +173,52 @@ def create_production_data():
             connections.close_all()
 
 
+def create_indicators():
+    with lock:
+        try:
+            today = pd.Timestamp("today").strftime("%Y-%m-%d")
+            # Define os parâmetros
+            params = {"data_registro": today}
+            # Faz a requisição de dados
+            production = QualProdViewSet.as_view({"get": "list"})
+            info_ihm = InfoIHMViewSet.as_view({"get": "list"})
+            prod_data = _get_api_data("/api/qual_prod/", params, production)
+            info_data = _get_api_data("/api/info_ihm/", params, info_ihm)
+
+            if not prod_data.empty and not info_data.empty:
+                create_ind = ProductionIndicators().create_indicators
+                # Criar os indicadores
+                eff_ind = create_ind(
+                    info=info_data, prod=prod_data, indicator=IndicatorType.EFFICIENCY
+                )
+                perf_ind = create_ind(
+                    info=info_data, prod=prod_data, indicator=IndicatorType.PERFORMANCE
+                )
+                repair_ind = create_ind(
+                    info=info_data, prod=prod_data, indicator=IndicatorType.REPAIR
+                )
+
+                # Insere no DB
+                with transaction.atomic():
+                    for eff in eff_ind.to_dict("records"):
+                        Eficiencia.objects.update_or_create(  # pylint: disable=no-member
+                            maquina_id=eff["maquina_id"],
+                            data_registro=eff["data_registro"],
+                            turno=eff["turno"],
+                            defaults=eff,
+                        )
+
+        except (ConnectionError, ValueError, KeyError) as e:
+            logger.error("Erro ao criar indicadores: %s", str(e))
+        finally:
+            connections.close_all()
+
+
 def analisar_all_dados():
     """Função que será executada periodicamente"""
     analisar_dados()
     create_production_data()
+    create_indicators()
 
 
 # cSpell:ignore jobstore periodica
