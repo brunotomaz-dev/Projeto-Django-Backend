@@ -7,11 +7,11 @@ import threading
 import pandas as pd
 import requests
 from apscheduler.schedulers.background import BackgroundScheduler
-from django.db import connections, transaction
+from django.db import connections, models, transaction
 from rest_framework.test import APIRequestFactory
 
 from .data_analysis import InfoIHMJoin, ProductionIndicators, join_qual_prod
-from .models import Eficiencia, InfoIHM, QualProd  # cSpell:words eficiencia
+from .models import Eficiencia, InfoIHM, Performance, QualProd, Repair  # cSpell:words eficiencia
 from .utils import IndicatorType
 from .views import (
     InfoIHMViewSet,
@@ -173,7 +173,27 @@ def create_production_data():
             connections.close_all()
 
 
+def __update_ind_db(df: pd.DataFrame, model: models.Model):
+    """Função auxiliar para atualizar os indicadores no banco de dados"""
+    with transaction.atomic():
+        for row in df.to_dict("records"):
+            model.objects.update_or_create(  # pylint: disable=no-member
+                maquina_id=row["maquina_id"],
+                data_registro=row["data_registro"],
+                turno=row["turno"],
+                defaults=row,
+            )
+
+
 def create_indicators():
+    """
+    Função que cria indicadores de eficiência, performance e reparo.
+
+    Obtém os dados de produção e qualidade da API,
+    junta-os e calcula os indicadores.
+
+    Note que essa função é executada periodicamente via scheduler.
+    """
     with lock:
         try:
             today = pd.Timestamp("today").strftime("%Y-%m-%d")
@@ -187,29 +207,30 @@ def create_indicators():
 
             if not prod_data.empty and not info_data.empty:
                 create_ind = ProductionIndicators().create_indicators
-                # Criar os indicadores
+                # Criar os indicadores de eficiência, performance e reparo
+
+                # Eficiência
                 eff_ind = create_ind(
                     info=info_data, prod=prod_data, indicator=IndicatorType.EFFICIENCY
                 )
+                # Salvar os indicadores no banco de dados usando transações atômicas
+                __update_ind_db(eff_ind, Eficiencia)
+                # Performance
                 perf_ind = create_ind(
                     info=info_data, prod=prod_data, indicator=IndicatorType.PERFORMANCE
                 )
+                # Salvar os indicadores no banco de dados usando transações atômicas
+                __update_ind_db(perf_ind, Performance)
+                # Reparo
                 repair_ind = create_ind(
                     info=info_data, prod=prod_data, indicator=IndicatorType.REPAIR
                 )
-
-                # Insere no DB
-                with transaction.atomic():
-                    for eff in eff_ind.to_dict("records"):
-                        Eficiencia.objects.update_or_create(  # pylint: disable=no-member
-                            maquina_id=eff["maquina_id"],
-                            data_registro=eff["data_registro"],
-                            turno=eff["turno"],
-                            defaults=eff,
-                        )
-
+                # Salvar os indicadores no banco de dados usando transações atômicas
+                __update_ind_db(repair_ind, Repair)
+        # Se ocorrer algum erro, loga o erro
         except (ConnectionError, ValueError, KeyError) as e:
             logger.error("Erro ao criar indicadores: %s", str(e))
+        # Garante que as conexões com o banco de dados são fechadas independentemente do resultado
         finally:
             connections.close_all()
 

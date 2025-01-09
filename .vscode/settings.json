@@ -25,5 +25,13 @@
     "sqlserver",
     "TOTVSDB",
     "viewsets"
+  ],
+  "sqltools.connections": [
+    {
+      "previewLimit": 50,
+      "driver": "SQLite",
+      "name": "LocalDB",
+      "database": "${workspaceFolder:Projeto Django Backend}/backend/db.sqlite3"
+    }
   ]
 }

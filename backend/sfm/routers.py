@@ -11,6 +11,10 @@ class SpecificTablesRouter:
         "analysis_info_ihm",
         "qualidade_ihm",
         "analysis_production",
+        "analysis_eff",
+        "analysis_perf",
+        "analysis_repair",
+        "analysis_absent",
     ]  # Adicione aqui as tabelas específicas
 
     def db_for_read(self, model, **hints):  # pylint: disable=unused-argument

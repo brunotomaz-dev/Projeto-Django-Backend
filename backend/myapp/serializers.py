@@ -5,13 +5,16 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 from .models import (
+    AbsenceLog,
     Eficiencia,
     InfoIHM,
     MaquinaCadastro,
     MaquinaIHM,
     MaquinaInfo,
+    Performance,
     QualidadeIHM,
     QualProd,
+    Repair,
 )
 
 
@@ -133,4 +136,34 @@ class EficienciaSerializer(serializers.ModelSerializer):
         """Classe de metadados"""
 
         model = Eficiencia  # cSpell:words eficiencia
+        fields = "__all__"
+
+
+class PerformanceSerializer(serializers.ModelSerializer):
+    """Serializador de dados de performance"""
+
+    class Meta:
+        """Classe de metadados"""
+
+        model = Performance
+        fields = "__all__"
+
+
+class RepairSerializer(serializers.ModelSerializer):
+    """Serializador de dados de reparo"""
+
+    class Meta:
+        """Classe de metadados"""
+
+        model = Repair
+        fields = "__all__"
+
+
+class AbsenceLogSerializer(serializers.ModelSerializer):
+    """Serializador dos dados de reparo"""
+
+    class Meta:
+        """Classe de Metadados"""
+
+        model = AbsenceLog
         fields = "__all__"

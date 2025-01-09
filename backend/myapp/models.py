@@ -11,6 +11,7 @@ class MaquinaInfo(models.Model):
     recno = models.AutoField(primary_key=True)
     maquina_id = models.CharField(max_length=50)
     status = models.CharField(max_length=50)
+    produto = models.CharField(max_length=256, null=True)
     ciclo_1_min = models.FloatField()
     ciclo_15_min = models.FloatField()
     contagem_total_ciclos = models.FloatField()
@@ -27,7 +28,10 @@ class MaquinaInfo(models.Model):
         db_table = "maquina_info"
 
     def __str__(self):
-        return f"{self.maquina_id} - {self.status} - {self.data_registro} - {self.hora_registro}"
+        return (
+            f"{self.maquina_id} - {self.status} - {self.data_registro} - "
+            f"{self.hora_registro} - {self.produto}"
+        )
 
 
 class MaquinaCadastro(models.Model):
@@ -169,12 +173,13 @@ class Eficiencia(models.Model):
     maquina_id = models.CharField(max_length=8)
     turno = models.CharField(max_length=3)
     data_registro = models.DateField()
-    total_ciclos = models.SmallIntegerField()
-    total_produzido_sensor = models.SmallIntegerField()
+    tempo = models.SmallIntegerField()
+    desconto = models.SmallIntegerField()
+    excedente = models.SmallIntegerField()
+    tempo_esperado = models.SmallIntegerField()
     total_produzido = models.SmallIntegerField()
-    tempo_parada = models.SmallIntegerField()
-    tempo_rodando = models.SmallIntegerField()
-    eficiencia = models.FloatField()  # cSpell: words eficiencia
+    producao_esperada = models.SmallIntegerField()
+    eficiencia = models.FloatField(null=True)  # cSpell: words eficiencia producao
 
     class Meta:
         """Definição do nome da tabela"""
@@ -184,3 +189,73 @@ class Eficiencia(models.Model):
 
     def __str__(self):
         return f"{self.linha} - {self.data_registro} - {self.total_produzido} - {self.eficiencia}"
+
+
+class Performance(models.Model):
+    """Modelo de informações de eficiência de máquina"""
+
+    recno = models.AutoField(primary_key=True)
+    fabrica = models.SmallIntegerField()
+    linha = models.SmallIntegerField()
+    maquina_id = models.CharField(max_length=8)
+    turno = models.CharField(max_length=3)
+    data_registro = models.DateField()
+    tempo = models.SmallIntegerField()
+    desconto = models.SmallIntegerField()
+    excedente = models.SmallIntegerField()
+    tempo_esperado = models.SmallIntegerField()
+    performance = models.FloatField(null=True)  # cSpell: words eficiencia producao
+
+    class Meta:
+        """Definição do nome da tabela"""
+
+        db_table = "analysis_perf"
+        indexes = [models.Index(fields=["data_registro"])]
+
+    def __str__(self):
+        return f"{self.linha} - {self.data_registro} - {self.performance}"
+
+
+class Repair(models.Model):
+    """Modelo de informações de eficiência de máquina"""
+
+    recno = models.AutoField(primary_key=True)
+    fabrica = models.SmallIntegerField()
+    linha = models.SmallIntegerField()
+    maquina_id = models.CharField(max_length=8)
+    turno = models.CharField(max_length=3)
+    data_registro = models.DateField()
+    tempo = models.SmallIntegerField()
+    desconto = models.SmallIntegerField()
+    excedente = models.SmallIntegerField()
+    tempo_esperado = models.SmallIntegerField()
+    reparo = models.FloatField(null=True)
+
+    class Meta:
+        """Definição do nome da tabela"""
+
+        db_table = "analysis_repair"
+        indexes = [models.Index(fields=["data_registro"])]
+
+    def __str__(self):
+        return f"{self.linha} - {self.data_registro} - {self.reparo}"
+
+
+class AbsenceLog(models.Model):
+    """Tabela de Absenteísmo"""
+
+    recno = models.AutoField(primary_key=True)
+    setor = models.CharField(max_length=50)
+    turno = models.CharField(max_length=3)
+    nome = models.CharField(max_length=256)
+    tipo = models.CharField(max_length=50)
+    motivo = models.CharField(max_length=256)
+    data_registro = models.DateField()
+    hora_registro = models.TimeField()
+    usuario = models.CharField(max_length=50)
+
+    class Meta:
+        """Definição do nome da tabela"""
+
+        db_table = "analysis_absent"
+        indexes = [models.Index(fields=["data_registro"])]

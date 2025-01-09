@@ -7,6 +7,7 @@ from django.db import connections
 # from django.shortcuts import render
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, status, viewsets
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -15,25 +16,64 @@ from rest_framework_simplejwt.views import TokenObtainPairView
 
 from .data_analysis import CleanData
 from .filters import (
+    AbsenceLogFilter,
     EficienciaFilter,
     InfoIHMFilter,
     MaquinaIHMFilter,
     MaquinaInfoFilter,
+    PerformanceFilter,
     QualidadeIHMFilter,
     QualProdFilter,
+    RepairFilter,
 )
-from .models import Eficiencia, InfoIHM, MaquinaIHM, MaquinaInfo, QualidadeIHM, QualProd
+from .models import (
+    AbsenceLog,
+    Eficiencia,
+    InfoIHM,
+    MaquinaIHM,
+    MaquinaInfo,
+    Performance,
+    QualidadeIHM,
+    QualProd,
+    Repair,
+)
 from .serializers import (
+    AbsenceLogSerializer,
     CustomTokenObtainPairSerializer,
     EficienciaSerializer,
     InfoIHMSerializer,
     MaquinaIHMSerializer,
     MaquinaInfoSerializer,
+    PerformanceSerializer,
     QualidadeIHMSerializer,
     QualProdSerializer,
     RegisterSerializer,
+    RepairSerializer,
 )
 from .utils import PESO_BANDEJAS, PESO_SACO
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    """
+    View para alteração de senha do usuário.
+    Requer autenticação JWT.
+
+    Parâmetros:
+    - old_password: senha atual
+    - new_password: nova senha
+    """
+    user = request.user
+    old_password = request.data.get("old_password")
+    new_password = request.data.get("new_password")
+
+    if not user.check_password(old_password):
+        return Response({"detail": "Senha atual incorreta"}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.set_password(new_password)
+    user.save()
+    return Response({"detail": "Senha alterada com sucesso"})
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -251,6 +291,82 @@ class EficienciaViewSet(viewsets.ModelViewSet):  # cSpell: words eficiencia
     authentication_classes = [JWTAuthentication]
 
 
+class PerformanceViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gerenciamento de registros de Performance.
+    Este ViewSet fornece operações CRUD (Create, Read, Update, Delete) para o modelo Performance.
+    Inclui filtragem, autenticação JWT e requer que o usuário esteja autenticado.
+    Atributos:
+        queryset: Conjunto de dados contendo todos os registros de Performance.
+        serializer_class: Classe serializadora para converter objetos Performance em JSON.
+        filter_backends: Define DjangoFilterBackend como backend de filtragem.
+        filterset_class: Classe que define os campos filtráveis do modelo.
+        permission_classes: Define que apenas usuários autenticados podem acessar os endpoints.
+        authentication_classes: Utiliza autenticação JWT (JSON Web Token).
+    Métodos HTTP suportados:
+        - GET: Listar/Recuperar registros de Performance
+        - POST: Criar novo registro de Performance
+        - PUT/PATCH: Atualizar registro de Performance existente
+        - DELETE: Remover registro de Performance
+    """
+
+    queryset = Performance.objects.all()  # pylint: disable=E1101
+    serializer_class = PerformanceSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = PerformanceFilter
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+
+class RepairViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gerenciamento de registros de Reparo.
+    Este ViewSet fornece operações CRUD (Create, Read, Update, Delete) para o modelo Repair.
+    Inclui filtragem, autenticação JWT e requer que o usuário esteja autenticado.
+    Atributos:
+        queryset: Conjunto de dados contendo todos os registros de Repair.
+        serializer_class: Classe serializadora para converter objetos Repair em JSON.
+        filter_backends: Define DjangoFilterBackend como backend de filtragem.
+        filterset_class: Classe que define os campos filtráveis do modelo.
+        permission_classes: Define que apenas usuários autenticados podem acessar os endpoints.
+        authentication_classes: Utiliza autenticação JWT (JSON Web Token).
+    Métodos HTTP suportados:
+        - GET: Listar/Recuperar registros de Repair
+        - POST: Criar novo registro de Repair
+        - PUT/PATCH: Atualizar registro de Repair existente
+        - DELETE: Remover registro de Repair
+    """
+
+    queryset = Repair.objects.all()  # pylint: disable=E1101
+    serializer_class = RepairSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = RepairFilter
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+
+class AbsenceViewSet(viewsets.ModelViewSet):
+    """
+    Um ViewSet para manipulação de operações de registro de ausências na API.
+    Este ViewSet fornece operações CRUD para objetos AbsenceLog através de uma interface REST API.
+    Requer autenticação JWT e o usuário deve estar autenticado para acessar os endpoints.
+    Atributos:
+        queryset: QuerySet com todos os objetos AbsenceLog
+        serializer_class: Classe serializadora para o modelo AbsenceLog
+        filter_backends: Lista de backends de filtro utilizados
+        filter_class: Classe de filtro para filtragem de AbsenceLog
+        permission_classes: Lista de classes de permissão requeridas
+        authentication_classes: Lista de classes de autenticação utilizadas
+    """
+
+    queryset = AbsenceLog.objects.all()  # pylint: disable=E1101
+    serializer_class = AbsenceLogSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = AbsenceLogFilter
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+
 class MaquinaInfoProductionViewSet(APIView):
     """
     Exibe informações de máquinas filtradas por período de tempo.
@@ -320,6 +436,7 @@ class MaquinaInfoProductionViewSet(APIView):
         Retorna:
         - query: consulta SQL para obter a lista de dados da máquina
         """
+        # FIXME - quando consolidado e histórico feito, inclui produto
         query = f"""
             SELECT
                 linha,

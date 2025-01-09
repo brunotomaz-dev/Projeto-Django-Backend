@@ -856,18 +856,18 @@ class ProductionIndicators:
         df[indicator.value] = (df.total_produzido / df.producao_esperada).round(3)
 
         # Corrige os valores nulos ou incorretos
-        df[indicator.value] = df[indicator.value].replace([np.inf, -np.inf], np.nan).fillna(0)
+        df[indicator.value] = df[indicator.value].replace([np.inf, -np.inf], 0).fillna(0)
 
         # Ajustar a eficiência para np.nan se produção esperada for 0
         mask = (df.producao_esperada == 0) & (df[indicator.value] == 0)
-        df.loc[mask, indicator.value] = np.nan
+        df.loc[mask, indicator.value] = 0
 
         # Corrigir a eficiência para 0 caso seja negativa
         df[indicator.value] = np.where(df[indicator.value] < 0, 0, df[indicator.value])
 
         # Ajustar eficiência para tempo de produção esperado menor que 10
         mask = df.tempo_esperado < 10
-        df.loc[mask, indicator.value] = np.nan
+        df.loc[mask, indicator.value] = 0
         df.loc[mask, "producao_esperada"] = 0
         df.loc[mask, "tempo_esperado"] = 0
 
@@ -885,7 +885,7 @@ class ProductionIndicators:
         df[indicador.value] = (df.excedente / df.tempo_esperado).round(3)
 
         # Corrige os valores nulos ou incorretos
-        df[indicador.value] = df[indicador.value].replace([np.inf, -np.inf], np.nan).fillna(0)
+        df[indicador.value] = df[indicador.value].replace([np.inf, -np.inf], 0).fillna(0)
 
         # Ajuste para paradas programadas
         paradas_programadas["programada"] = 1
@@ -899,7 +899,7 @@ class ProductionIndicators:
 
         # np.nan para paradas programadas
         mask = df.programada == 1
-        df.loc[mask, indicador.value] = np.nan
+        df.loc[mask, indicador.value] = 0
         df.loc[mask, "tempo_esperado"] = 0
 
         # Remove a coluna programada
