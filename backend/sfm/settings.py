@@ -10,8 +10,15 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+# cSpell: words dotenv
+
+import os
 from datetime import timedelta
 from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -112,14 +119,14 @@ DATABASES = {
         },
     },
     "sqlserver": {
-        "ENGINE": "mssql",
-        "NAME": "AUTOMACAO",  # cSpell:disable-line
-        "USER": "bruno.thomaz",  # cSpell:disable-line
-        "PASSWORD": ">gn68U@X@4o8",
-        "HOST": "srv-sqlserver",
-        "PORT": "1433",
+        "ENGINE": os.getenv("DB_ENGINE"),
+        "NAME": os.getenv("DB_NAME"),
+        "USER": os.getenv("DB_USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "HOST": os.getenv("DB_HOST"),
+        "PORT": os.getenv("DB_PORT"),
         "OPTIONS": {
-            "driver": "ODBC Driver 17 for SQL Server",
+            "driver": os.getenv("DB_DRIVER"),
         },
     },
 }
