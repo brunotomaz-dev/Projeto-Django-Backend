@@ -10,7 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
-# cSpell: words dotenv
+# cSpell: words dotenv totvsdb
 
 import os
 from datetime import timedelta
@@ -121,6 +121,17 @@ DATABASES = {
     "sqlserver": {
         "ENGINE": os.getenv("DB_ENGINE"),
         "NAME": os.getenv("DB_NAME"),
+        "USER": os.getenv("DB_USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "HOST": os.getenv("DB_HOST"),
+        "PORT": os.getenv("DB_PORT"),
+        "OPTIONS": {
+            "driver": os.getenv("DB_DRIVER"),
+        },
+    },
+    "totvsdb": {
+        "ENGINE": os.getenv("DB_ENGINE"),
+        "NAME": "TOTVSDB",
         "USER": os.getenv("DB_USER"),
         "PASSWORD": os.getenv("DB_PASSWORD"),
         "HOST": os.getenv("DB_HOST"),

@@ -8,6 +8,7 @@ from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 
 from .views import (
     AbsenceViewSet,
+    CartCountViewSet,
     CustomTokenObtainPairView,
     EficienciaViewSet,
     InfoIHMViewSet,
@@ -19,6 +20,7 @@ from .views import (
     QualProdViewSet,
     RegisterView,
     RepairViewSet,
+    StockOnCFViewSet,
     change_password,
 )
 
@@ -44,5 +46,7 @@ urlpatterns = [
         MaquinaInfoProductionViewSet.as_view(),
         name="maquinainfo_production",
     ),
+    path("caixas_cf/", StockOnCFViewSet.as_view(), name="caixas_cf"),
+    path("cart_count/", CartCountViewSet.as_view(), name="cart_count"),
     path("", include(router.urls)),
 ]
