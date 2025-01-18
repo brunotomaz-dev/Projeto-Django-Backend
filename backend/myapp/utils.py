@@ -5,7 +5,7 @@ from enum import Enum
 PESO_BANDEJAS = 0.028
 PESO_SACO = 0.080
 
-TEMPO_AJUSTE = 5
+TEMPO_AJUSTE = 2
 
 CICLOS_ESPERADOS = 11.2
 CICLOS_BOLINHA = 7
@@ -25,21 +25,27 @@ class IndicatorType(Enum):
 DESC_EFF = {
     "Troca de Sabor": 15,
     "Troca de Produto": 35,
-    "Refeição": 60,
+    "Refeição": 65,
     "Café e Ginástica Laboral": 10,
     "Treinamento": 60,
 }
 DESC_PERF = {
     "Troca de Sabor": 15,
     "Troca de Produto": 35,
-    "Refeição": 60,
+    "Refeição": 65,
     "Café e Ginástica Laboral": 10,
     "Treinamento": 60,
 }
 DESC_REP = {"Troca de Produto": 35}
 
 # List que não afeta ou afeta
-NOT_EFF = ["Sem Produção", "Backup"]
+NOT_EFF = [
+    "Sem Produção",
+    "Backup",
+    "Limpeza para parada de Fábrica",
+    "Saída para Backup",
+    "Revezamento",
+]
 NOT_PERF = [
     "Sem Produção",
     "Backup",
@@ -47,5 +53,8 @@ NOT_PERF = [
     "Risco de Contaminação",
     "Parâmetros de Qualidade",
     "Manutenção",
+    "Liberada",
+    "Saída para Backup",
+    "Revezamento",
 ]
 AF_REP = ["Manutenção", "Troca de Produtos"]

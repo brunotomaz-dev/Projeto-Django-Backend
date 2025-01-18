@@ -106,15 +106,13 @@ def analisar_dados():
     """Função que será executada periodicamente"""
     with lock:
         try:
-            params = {"data_registro": pd.Timestamp("today").strftime("%Y-%m-%d")}
-            # first_day = now.replace(day=1)
-            # last_day = now.replace(day=pd.Period(now, "M").days_in_month)
-            # days_ago_31 = now - pd.DateOffset(days=31)
 
             # Criar request com filtros
+            params = {"data_registro": pd.Timestamp("today").strftime("%Y-%m-%d")}
+
             # params = {
-            #     "data_registro__gt": days_ago_31.strftime("%Y-%m-%d"),
-            #     "data_registro__lt": last_day.strftime("%Y-%m-%d"),
+            #     "data_registro__gt": "2024-11-30",
+            #     "data_registro__lt": "2025-01-16",
             # }
 
             info_view = MaquinaInfoViewSet.as_view({"get": "list"})
@@ -148,6 +146,7 @@ def create_production_data():
             today = pd.Timestamp("today").strftime("%Y-%m-%d")
 
             params = {"period": f"{today},{today}"}
+            # params = {"period": f"{'2024-12-01'},{'2025-01-15'}"}
 
             prod_view = MaquinaInfoProductionViewSet.as_view()
             qual_view = QualidadeIHMViewSet.as_view({"get": "list"})
@@ -199,6 +198,10 @@ def create_indicators():
             today = pd.Timestamp("today").strftime("%Y-%m-%d")
             # Define os parâmetros
             params = {"data_registro": today}
+            # params = {
+            #     "data_registro__gt": "2024-12-01",
+            #     "data_registro__lt": "2025-01-15",
+            # }
             # Faz a requisição de dados
             production = QualProdViewSet.as_view({"get": "list"})
             info_ihm = InfoIHMViewSet.as_view({"get": "list"})

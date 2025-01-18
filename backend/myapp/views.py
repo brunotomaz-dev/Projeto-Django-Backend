@@ -90,6 +90,17 @@ class RegisterView(generics.CreateAPIView):
     serializer_class = RegisterSerializer
 
 
+class BasicDynamicFieldsViewSets(viewsets.ModelViewSet):
+    def get_serializer(self, *args, **kwargs):
+        # Recupera os campos dinâmicos da query string
+        fields = self.request.query_params.get("fields", None)
+
+        # Se houver campos dinâmicos, passa-os para o serializador
+        kwargs["fields"] = fields.split(",") if fields else None
+
+        return super().get_serializer(*args, **kwargs)
+
+
 # Create your views here.
 class MaquinaInfoViewSet(viewsets.ModelViewSet):
     """
@@ -264,7 +275,7 @@ class QualProdViewSet(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication]
 
 
-class EficienciaViewSet(viewsets.ModelViewSet):  # cSpell: words eficiencia
+class EficienciaViewSet(BasicDynamicFieldsViewSets):  # cSpell: words eficiencia
     """
     ViewSet para gerenciamento de registros de Eficiência.
     Este ViewSet fornece operações CRUD (Create, Read, Update, Delete) para o modelo Eficiencia.
@@ -291,7 +302,7 @@ class EficienciaViewSet(viewsets.ModelViewSet):  # cSpell: words eficiencia
     authentication_classes = [JWTAuthentication]
 
 
-class PerformanceViewSet(viewsets.ModelViewSet):
+class PerformanceViewSet(BasicDynamicFieldsViewSets):
     """
     ViewSet para gerenciamento de registros de Performance.
     Este ViewSet fornece operações CRUD (Create, Read, Update, Delete) para o modelo Performance.
@@ -318,7 +329,7 @@ class PerformanceViewSet(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication]
 
 
-class RepairViewSet(viewsets.ModelViewSet):
+class RepairViewSet(BasicDynamicFieldsViewSets):
     """
     ViewSet para gerenciamento de registros de Reparo.
     Este ViewSet fornece operações CRUD (Create, Read, Update, Delete) para o modelo Repair.
@@ -436,7 +447,6 @@ class MaquinaInfoProductionViewSet(APIView):
         Retorna:
         - query: consulta SQL para obter a lista de dados da máquina
         """
-        # FIXME - quando consolidado e histórico feito, inclui produto
         query = f"""
             SELECT
                 linha,
@@ -444,7 +454,7 @@ class MaquinaInfoProductionViewSet(APIView):
                 turno,
                 contagem_total_ciclos as total_ciclos,
                 contagem_total_produzido as total_produzido_sensor,
-                B1_DESC as produto,
+                produto,
                 data_registro
             FROM (
                 SELECT
@@ -458,9 +468,7 @@ class MaquinaInfoProductionViewSet(APIView):
                     t1.turno,
                     t1.contagem_total_ciclos,
                     t1.contagem_total_produzido,
-                    (SELECT TOP 1 t2.produto_id FROM AUTOMACAO.dbo.maquina_produto t2
-                    WHERE t2.maquina_id = t1.maquina_id AND t2.data_registro <= t1.data_registro
-                    ORDER BY t2.data_registro DESC, t2.hora_registro DESC) as produto_id,
+                    t1.produto,
                     t1.data_registro,
                     t1.hora_registro,
                     ROW_NUMBER() OVER (
@@ -468,9 +476,6 @@ class MaquinaInfoProductionViewSet(APIView):
                         ORDER BY t1.data_registro DESC, t1.hora_registro DESC) AS rn
                 FROM AUTOMACAO.dbo.maquina_info t1
             ) AS t
-            INNER JOIN
-                TOTVSDB.dbo.SB1000 SB1 WITH (NOLOCK)
-                ON SB1.B1_FILIAL = '01' AND SB1.B1_COD = t.produto_id AND SB1.D_E_L_E_T_<>'*'
             WHERE t.rn = 1
                 AND hora_registro > '00:01'
                 AND data_registro between '{first_day}' and '{last_day}'
@@ -516,6 +521,9 @@ class StockOnCFViewSet(APIView):
     """
     Exibe informações de estoque de produtos em CF.
     """
+
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
     def get(self, _request):
         """

@@ -66,6 +66,22 @@ class RegisterSerializer(serializers.ModelSerializer):
         return user
 
 
+class DynamicFieldsModelSerializer(serializers.ModelSerializer):
+    """
+    Serializer que permite selecionar campos dinamicamente
+    """
+
+    def __init__(self, *args, **kwargs):
+        fields = kwargs.pop("fields", None)
+        super().__init__(*args, **kwargs)
+
+        if fields:
+            allowed = set(fields)
+            existing = set(self.fields)
+            for field_name in existing - allowed:
+                self.fields.pop(field_name)
+
+
 class MaquinaInfoSerializer(serializers.ModelSerializer):
     """Serializador de dados de informações de máquina"""
 
@@ -129,7 +145,7 @@ class QualProdSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class EficienciaSerializer(serializers.ModelSerializer):
+class EficienciaSerializer(DynamicFieldsModelSerializer):
     """Serializador de dados de eficiência"""
 
     class Meta:
@@ -139,7 +155,7 @@ class EficienciaSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class PerformanceSerializer(serializers.ModelSerializer):
+class PerformanceSerializer(DynamicFieldsModelSerializer):
     """Serializador de dados de performance"""
 
     class Meta:
@@ -149,7 +165,7 @@ class PerformanceSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class RepairSerializer(serializers.ModelSerializer):
+class RepairSerializer(DynamicFieldsModelSerializer):
     """Serializador de dados de reparo"""
 
     class Meta:

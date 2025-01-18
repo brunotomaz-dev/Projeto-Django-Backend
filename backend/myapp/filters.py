@@ -25,7 +25,7 @@ class MaquinaInfoFilter(django_filters.FilterSet):
 
         model = MaquinaInfo
         fields = {
-            "data_registro": ["exact", "gt", "lt"],
+            "data_registro": ["exact", "gt", "lt", "gte", "lte"],
             "turno": ["exact"],
             "maquina_id": ["exact"],
         }
@@ -40,7 +40,7 @@ class MaquinaIHMFilter(django_filters.FilterSet):
         """Classe de metadados"""
 
         model = MaquinaIHM
-        fields = {"data_registro": ["exact", "gt", "lt"]}
+        fields = {"data_registro": ["exact", "gt", "lt", "gte", "lte"]}
 
 
 class InfoIHMFilter(django_filters.FilterSet):
@@ -52,7 +52,7 @@ class InfoIHMFilter(django_filters.FilterSet):
         """Classe de metadados"""
 
         model = InfoIHM
-        fields = {"data_registro": ["exact", "gt", "lt"]}
+        fields = {"data_registro": ["exact", "gt", "lt", "gte", "lte"]}
 
 
 class QualidadeIHMFilter(django_filters.FilterSet):
@@ -64,7 +64,7 @@ class QualidadeIHMFilter(django_filters.FilterSet):
         """Classe de metadados"""
 
         model = QualidadeIHM
-        fields = {"data_registro": ["exact", "gt", "lt"]}
+        fields = {"data_registro": ["exact", "gt", "lt", "gte", "lte"]}
 
 
 class QualProdFilter(django_filters.FilterSet):
@@ -76,7 +76,7 @@ class QualProdFilter(django_filters.FilterSet):
         """Classe de metadados"""
 
         model = QualProd
-        fields = {"data_registro": ["exact", "gt", "lt"]}
+        fields = {"data_registro": ["exact", "gt", "lt", "gte", "lte"]}
 
 
 class EficienciaFilter(django_filters.FilterSet):  # cSpell:ignore Eficiencia
@@ -88,7 +88,7 @@ class EficienciaFilter(django_filters.FilterSet):  # cSpell:ignore Eficiencia
         """Classe de metadados"""
 
         model = Eficiencia
-        fields = {"data_registro": ["exact", "gt", "lt"]}
+        fields = {"data_registro": ["exact", "gt", "lt", "gte", "lte"]}
 
 
 class PerformanceFilter(django_filters.FilterSet):
@@ -100,7 +100,7 @@ class PerformanceFilter(django_filters.FilterSet):
         """Classe de metadados"""
 
         model = Performance
-        fields = {"data_registro": ["exact", "gt", "lt"]}
+        fields = {"data_registro": ["exact", "gt", "lt", "gte", "lte"]}
 
 
 class RepairFilter(django_filters.FilterSet):
@@ -112,7 +112,7 @@ class RepairFilter(django_filters.FilterSet):
         """Classe de metadados"""
 
         model = Repair
-        fields = {"data_registro": ["exact", "gt", "lt"]}
+        fields = {"data_registro": ["exact", "gt", "lt", "gte", "lte"]}
 
 
 class AbsenceLogFilter(django_filters.FilterSet):
@@ -128,7 +128,7 @@ class AbsenceLogFilter(django_filters.FilterSet):
 
         model = AbsenceLog
         fields = {
-            "data_registro": ["exact", "gt", "lt"],
+            "data_registro": ["exact", "gt", "lt", "gte", "lte"],
             "nome": ["exact", "icontains"],
             "tipo": ["exact"],
             "setor": ["exact"],
