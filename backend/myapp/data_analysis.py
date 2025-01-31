@@ -163,7 +163,7 @@ class InfoIHMJoin:
             on="data_hora",
             by="maquina_id",
             direction="nearest",
-            tolerance=pd.Timedelta("2m"),
+            tolerance=pd.Timedelta("3m30sec"),
         )
 
         # Ajuste de Linha que não leva em conta a data
@@ -259,9 +259,9 @@ class InfoIHMJoin:
         ]
 
         # Preencher os valores
-        df[fill_cols] = (
-            df.groupby("group")[fill_cols].ffill().bfill()
-        )  # NOTE - melhor performance do que código original
+        df[fill_cols] = df.groupby("group")[fill_cols].ffill()
+        df[fill_cols] = df.groupby("group")[fill_cols].bfill()
+        # NOTE - melhor performance do que código original
 
         # Se os dado de uma coluna for '' ou ' ', substituir por NaN
         df = df.replace(r"^s*$", None, regex=True)
