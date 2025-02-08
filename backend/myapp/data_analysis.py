@@ -103,29 +103,27 @@ class InfoIHMJoin:
 
         return df
 
-    # @staticmethod
-    # def __line_adjust_date_opt(df_ihm: pd.DataFrame, df: pd.DataFrame) -> pd.DataFrame:
-    #     maq_line_map = df_ihm[
-    #         ["data_registro", "maquina_id", "linha", "fabrica"]
-    #         ].drop_duplicates()
+        # @staticmethod
+        # def __line_adjust_date_opt(df_ihm: pd.DataFrame, df: pd.DataFrame) -> pd.DataFrame:
+        #     ml_map = df_ihm[["data_registro", "maquina_id", "linha", "fabrica"]].drop_duplicates()
 
-    #     df = pd.merge_asof(
-    #         df,
-    #         maq_line_map,
-    #         on="data_registro",
-    #         by="maquina_id",
-    #         direction="nearest",
-    #         suffixes=("", "_aux"),
-    #     )
+        #     df = pd.merge_asof(
+        #         df,
+        #         ml_map,
+        #         on="data_registro",
+        #         by="maquina_id",
+        #         direction="nearest",
+        #         suffixes=("", "_aux"),
+        #     )
 
-    #     # Preencher linhas vazias
-    #     df["linha"] = df["linha"].fillna(df["linha_aux"])
-    #     df["fabrica"] = df["fabrica"].fillna(df["fabrica_aux"])
+        # # Preencher linhas vazias
+        # df["linha"] = df["linha"].fillna(df["linha_aux"])
+        # df["fabrica"] = df["fabrica"].fillna(df["fabrica_aux"])
 
-    #     # Remover coluna auxiliar
-    #     df = df.drop(["linha_aux", "fabrica_aux"], axis=1)
+        # # Remover coluna auxiliar
+        # df = df.drop(["linha_aux", "fabrica_aux"], axis=1)
 
-    #     return df
+        # return df
 
     def __clean_merge(self) -> pd.DataFrame:
         """Une os DataFrames de info e ihm."""
@@ -163,7 +161,7 @@ class InfoIHMJoin:
             on="data_hora",
             by="maquina_id",
             direction="nearest",
-            tolerance=pd.Timedelta("2m"),
+            tolerance=pd.Timedelta("3m30sec"),
         )
 
         # Ajuste de Linha que não leva em conta a data
@@ -259,9 +257,9 @@ class InfoIHMJoin:
         ]
 
         # Preencher os valores
-        df[fill_cols] = (
-            df.groupby("group")[fill_cols].ffill().bfill()
-        )  # NOTE - melhor performance do que código original
+        df[fill_cols] = df.groupby("group")[fill_cols].ffill()
+        df[fill_cols] = df.groupby("group")[fill_cols].bfill()
+        # NOTE - melhor performance do que código original
 
         # Se os dado de uma coluna for '' ou ' ', substituir por NaN
         df = df.replace(r"^s*$", None, regex=True)
@@ -383,7 +381,7 @@ class InfoIHMJoin:
         mask = df.motivo == "Saída para Backup"
 
         # Ajuste das colunas de backup
-        df.s_backup = df.s_backup.where(mask)
+        df.s_backup = np.where(mask, df.s_backup, None)
         df.problema = np.where(mask, "Parada Planejada", df.problema)
         df.causa = np.where(mask, "Backup", df.causa)
 
@@ -749,6 +747,13 @@ class ProductionIndicators:
         df.loc[mask, "producao_esperada"] = 0
         df.loc[mask, "tempo_esperado"] = 0
 
+        # Ajustar o indicador caso o valor seja maior que 120 e o tempo esperado menor que 15 min
+        mask = (df[indicator.value] > 1.2) & (df.tempo_esperado < 15)
+        df.loc[mask, indicator.value] = 1.2
+
+        # Definir valor máximo e mínimo do indicador
+        df[indicator.value] = df[indicator.value].clip(0, 1.5)
+
         return df
 
     @staticmethod
@@ -782,5 +787,8 @@ class ProductionIndicators:
 
         # Remove a coluna programada
         df = df.drop(columns="programada")
+
+        # Definir valor máximo e mínimo do indicador
+        df[indicador.value] = df[indicador.value].clip(0, 1)
 
         return df

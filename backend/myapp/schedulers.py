@@ -102,6 +102,9 @@ def _save_processed_data(dados_processados):
             )
 
 
+# DATA_ANALYSIS = "2025-02-07"
+
+
 def analisar_dados():
     """Função que será executada periodicamente"""
     with lock:
@@ -111,8 +114,8 @@ def analisar_dados():
             params = {"data_registro": pd.Timestamp("today").strftime("%Y-%m-%d")}
 
             # params = {
-            #     "data_registro__gt": "2024-11-30",
-            #     "data_registro__lt": "2025-01-16",
+            #     "data_registro__gte": DATA_ANALYSIS,
+            #     "data_registro__lte": pd.Timestamp("today").strftime("%Y-%m-%d"),
             # }
 
             info_view = MaquinaInfoViewSet.as_view({"get": "list"})
@@ -146,7 +149,7 @@ def create_production_data():
             today = pd.Timestamp("today").strftime("%Y-%m-%d")
 
             params = {"period": f"{today},{today}"}
-            # params = {"period": f"{'2024-12-01'},{'2025-01-15'}"}
+            # params = {"period": f"{DATA_ANALYSIS},{today}"}
 
             prod_view = MaquinaInfoProductionViewSet.as_view()
             qual_view = QualidadeIHMViewSet.as_view({"get": "list"})
@@ -198,10 +201,14 @@ def create_indicators():
             today = pd.Timestamp("today").strftime("%Y-%m-%d")
             # Define os parâmetros
             params = {"data_registro": today}
+
+            # params = {"data_registro": DATA_ANALYSIS}
+
             # params = {
-            #     "data_registro__gt": "2024-12-01",
-            #     "data_registro__lt": "2025-01-15",
+            #     "data_registro__gte": DATA_ANALYSIS,
+            #     "data_registro__lte": today,
             # }
+
             # Faz a requisição de dados
             production = QualProdViewSet.as_view({"get": "list"})
             info_ihm = InfoIHMViewSet.as_view({"get": "list"})
@@ -243,6 +250,7 @@ def analisar_all_dados():
     analisar_dados()
     create_production_data()
     create_indicators()
+    # print("----------------------------- Concluído -----------------------------")
 
 
 # cSpell:ignore jobstore periodica
