@@ -102,7 +102,7 @@ def _save_processed_data(dados_processados):
             )
 
 
-# DATA_ANALYSIS = "2025-02-06"
+# DATA_ANALYSIS = "2025-02-07"
 
 
 def analisar_dados():
