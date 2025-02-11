@@ -92,6 +92,35 @@ class MaquinaInfoSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
+class MaquinaInfoHourSerializer(serializers.Serializer):
+    """Serializador de dados de informações de máquina"""
+
+    maquina_id = serializers.CharField()
+    intervalo = serializers.CharField()
+    total = serializers.IntegerField()
+
+    def to_representation(self, instance):
+        """
+        Converte a instância em uma representação serializável
+        """
+        if isinstance(instance, dict):
+            return {
+                "maquina_id": instance.get("maquina_id"),
+                "intervalo": instance.get("intervalo"),
+                "total": instance.get("total"),
+            }
+        return super().to_representation(instance)
+
+    def create(self, validated_data):
+        """Método create"""
+        return validated_data
+
+    def update(self, instance, validated_data):
+        """Método update"""
+        instance.update(validated_data)
+        return instance
+
+
 class MaquinaCadastroSerializer(serializers.ModelSerializer):
     """Serializador de dados de cadastro de máquina"""
 

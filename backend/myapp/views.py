@@ -1,5 +1,7 @@
 """Módulo de visualizações do Django Rest Framework"""
 
+import logging
+
 import numpy as np
 import pandas as pd
 from django.db import connections
@@ -43,6 +45,7 @@ from .serializers import (
     EficienciaSerializer,
     InfoIHMSerializer,
     MaquinaIHMSerializer,
+    MaquinaInfoHourSerializer,
     MaquinaInfoSerializer,
     PerformanceSerializer,
     QualidadeIHMSerializer,
@@ -50,7 +53,9 @@ from .serializers import (
     RegisterSerializer,
     RepairSerializer,
 )
-from .utils import PESO_BANDEJAS, PESO_SACO
+from .views_processor import ProductionDataProcessor, QualidadeDataProcessor
+
+logger = logging.getLogger(__name__)
 
 
 @api_view(["POST"])
@@ -91,6 +96,8 @@ class RegisterView(generics.CreateAPIView):
 
 
 class BasicDynamicFieldsViewSets(viewsets.ModelViewSet):
+    """ViewSet básico com suporte a campos dinâmicos"""
+
     def get_serializer(self, *args, **kwargs):
         # Recupera os campos dinâmicos da query string
         fields = self.request.query_params.get("fields", None)
@@ -120,6 +127,58 @@ class MaquinaInfoViewSet(viewsets.ModelViewSet):
     filterset_class = MaquinaInfoFilter
     permission_classes = [IsAuthenticated]
     authentication_classes = [JWTAuthentication]
+
+
+class MaqInfoHourProductionViewSet(viewsets.ModelViewSet):
+    """
+    Exibe e edita informações de produção por hora.
+
+    Exemplo de uso:
+    - GET /maq_info_hour_prod/?data_registro=2021-01-01
+    - GET /maq_info_hour_prod/?data_registro__gt=2021-01-01
+    - GET /maq_info_hour_prod/?data_registro__lt=2021-01-01
+    - GET /maq_info_hour_prod/?data_registro__gt=2021-01-01&data_registro__lt=2021-01-31
+    """
+
+    # pylint: disable=E1101
+    queryset = MaquinaInfo.objects.all()
+    serializer_class = MaquinaInfoHourSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = MaquinaInfoFilter
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    def list(self, request, *args, **kwargs):
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
+
+            # Converte o queryset em um DataFrame
+            df = pd.DataFrame(list(queryset.values()))
+
+            # Logger
+            logger.info("Processando %d registros de produção", len(df))
+
+            # Instancia o processador de dados de produção
+            processor = ProductionDataProcessor()
+
+            # Processa os dados
+            processed_data = processor.process_production_data(df)
+
+            # Logger de sucesso
+            logger.debug("Dados processados com sucesso")
+
+            # Converte o DataFrame em um queryset
+            df = processed_data.to_dict("records")
+
+            # Serializa o queryset limpo e retorna a resposta
+            serializer = self.get_serializer(df, many=True)
+            return Response(serializer.data)
+        except Exception as e:  # pylint: disable=W0718
+            logger.error("Erro ao processar dados: %s", str(e))
+            return Response(
+                {"error": f"Erro ao processar dados: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class MaquinaIHMViewSet(viewsets.ModelViewSet):
@@ -195,6 +254,18 @@ class QualidadeIHMViewSet(viewsets.ModelViewSet):
     """
     Exibe e edita informações de qualidade de IHM de máquinas.
 
+    Cálculos realizados:
+    1. Bandejas vazias = (peso_total - PESO_SACO) / PESO_BANDEJAS
+    2. Bandejas retrabalho = (peso_total - PESO_SACO) / PESO_BANDEJAS
+
+    Constantes utilizadas:
+    - PESO_SACO: Peso do saco vazio
+    - PESO_BANDEJAS: Peso médio das bandejas
+
+    Arredondamentos:
+    - Valores intermediários: 3 casas decimais
+    - Quantidade de bandejas: número inteiro
+
     Exemplo de uso:
     - GET /qualidadeihm/?data_registro=2021-01-01
     - GET /qualidadeihm/?data_registro__gt=2021-01-01
@@ -211,40 +282,36 @@ class QualidadeIHMViewSet(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication]
 
     def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
+        try:
+            queryset = self.filter_queryset(self.get_queryset())
 
-        # Converte o queryset em um DataFrame
-        df = pd.DataFrame(list(queryset.values()))
+            # Converte o queryset em um DataFrame
+            df = pd.DataFrame(list(queryset.values()))
 
-        # Arredondar os valores
-        df["bdj_vazias"] = df["bdj_vazias"].round(3)
-        df["bdj_retrabalho"] = df["bdj_retrabalho"].round(3)
-        df["descarte_paes"] = df["descarte_paes"].round(3)  # cSpell: disable-line
-        df["descarte_paes_pasta"] = df["descarte_paes_pasta"].round(3)  # cSpell: disable-line
-        df["descarte_pasta"] = df["descarte_pasta"].round(3)
+            # Logger
+            logger.info("Processando %d registros de qualidade", len(df))
 
-        # Se houver descarte, calcular o valor
-        df.loc[df["bdj_vazias"] > 0, "bdj_vazias"] = (
-            (df["bdj_vazias"] - PESO_SACO) / PESO_BANDEJAS
-        ).round(0)
-        df.loc[df["bdj_retrabalho"] > 0, "bdj_retrabalho"] = (
-            (df["bdj_retrabalho"] - PESO_SACO) / PESO_BANDEJAS
-        ).round(0)
+            # Instancia o processador de dados de qualidade
+            processor = QualidadeDataProcessor()
 
-        # Ajustar para inteiro
-        df["bdj_vazias"] = df["bdj_vazias"].astype(int)
-        df["bdj_retrabalho"] = df["bdj_retrabalho"].astype(int)
+            # Processa os dados
+            processed_data = processor.process_qualidade_data(df)
 
-        # Seta 0 como valor mínimo
-        df["bdj_vazias"] = df["bdj_vazias"].clip(lower=0)
-        df["bdj_retrabalho"] = df["bdj_retrabalho"].clip(lower=0)
+            # Logger de sucesso
+            logger.debug("Dados processados com sucesso")
 
-        # Converte o DataFrame em uma um queryset
-        df = df.to_dict("records")
+            # Converte o DataFrame em uma um queryset
+            df = processed_data.to_dict("records")
 
-        # Serializa o queryset limpo e retorna a resposta
-        serializer = self.get_serializer(df, many=True)
-        return Response(serializer.data)
+            # Serializa o queryset limpo e retorna a resposta
+            serializer = self.get_serializer(df, many=True)
+            return Response(serializer.data)
+        except Exception as e:  # pylint: disable=W0718
+            logger.error("Erro ao processar dados: %s", str(e))
+            return Response(
+                {"error": f"Erro ao processar dados: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
 
 class QualProdViewSet(viewsets.ModelViewSet):
