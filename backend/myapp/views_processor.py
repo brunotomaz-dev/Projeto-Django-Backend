@@ -36,7 +36,16 @@ class QualidadeDataProcessor:
 
 
 class ProductionDataProcessor:
-    "Processa os dados de produção antes de serem enviados para o frontend"
+    """
+    Processa os dados de produção antes de serem enviados para o frontend.
+
+    Principais funcionalidades:
+    - Processamento de data/hora
+    - Agregação por hora
+    - Cálculo de totais produzidos
+    - Conversão de bandejas para caixas
+    - Formatação final dos dados
+    """
 
     @staticmethod
     def process_production_data(df: pd.DataFrame) -> pd.DataFrame:
@@ -54,8 +63,11 @@ class ProductionDataProcessor:
             df.data_registro + " " + df.hora_registro.astype(str).str.split(".").str[0]
         )
 
-        # Ajusta data_hora
-        df.data_hora = pd.to_datetime(df.data_hora)
+        # # Ajusta data_hora
+        # df.data_hora = pd.to_datetime(df.data_hora)
+
+        # Ajusta data_hora - Corrigido o parsing da data
+        df.data_hora = pd.to_datetime(df.data_hora, format="%d/%m/%Y %H:%M:%S")
 
         # Torna a data e a maquina_id como índice
         df = df.set_index(["data_hora", "maquina_id"])

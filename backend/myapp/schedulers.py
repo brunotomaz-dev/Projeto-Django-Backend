@@ -102,7 +102,7 @@ def _save_processed_data(dados_processados):
             )
 
 
-# DATA_ANALYSIS = "2025-02-07"
+DATA_ANALYSIS = "2025-02-13"
 
 
 def analisar_dados():
@@ -111,12 +111,12 @@ def analisar_dados():
         try:
 
             # Criar request com filtros
-            params = {"data_registro": pd.Timestamp("today").strftime("%Y-%m-%d")}
+            # params = {"data_registro": pd.Timestamp("today").strftime("%Y-%m-%d")}
 
-            # params = {
-            #     "data_registro__gte": DATA_ANALYSIS,
-            #     "data_registro__lte": pd.Timestamp("today").strftime("%Y-%m-%d"),
-            # }
+            params = {
+                "data_registro__gte": DATA_ANALYSIS,
+                "data_registro__lte": pd.Timestamp("today").strftime("%Y-%m-%d"),
+            }
 
             info_view = MaquinaInfoViewSet.as_view({"get": "list"})
             ihm_view = MaquinaIHMViewSet.as_view({"get": "list"})
@@ -148,8 +148,8 @@ def create_production_data():
         try:
             today = pd.Timestamp("today").strftime("%Y-%m-%d")
 
-            params = {"period": f"{today},{today}"}
-            # params = {"period": f"{DATA_ANALYSIS},{today}"}
+            # params = {"period": f"{today},{today}"}
+            params = {"period": f"{DATA_ANALYSIS},{today}"}
 
             prod_view = MaquinaInfoProductionViewSet.as_view()
             qual_view = QualidadeIHMViewSet.as_view({"get": "list"})
@@ -200,14 +200,14 @@ def create_indicators():
         try:
             today = pd.Timestamp("today").strftime("%Y-%m-%d")
             # Define os parâmetros
-            params = {"data_registro": today}
+            # params = {"data_registro": today}
 
             # params = {"data_registro": DATA_ANALYSIS}
 
-            # params = {
-            #     "data_registro__gte": DATA_ANALYSIS,
-            #     "data_registro__lte": today,
-            # }
+            params = {
+                "data_registro__gte": DATA_ANALYSIS,
+                "data_registro__lte": today,
+            }
 
             # Faz a requisição de dados
             production = QualProdViewSet.as_view({"get": "list"})
