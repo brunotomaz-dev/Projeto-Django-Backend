@@ -102,7 +102,12 @@ def _save_processed_data(dados_processados):
             )
 
 
-DATA_ANALYSIS = "2025-02-13"
+DATA_ANALYSIS = "2025-03-04"
+
+
+def today_date():
+    """Função que retorna a data de hoje"""
+    return pd.Timestamp("today").strftime("%Y-%m-%d")
 
 
 def analisar_dados():
@@ -111,11 +116,11 @@ def analisar_dados():
         try:
 
             # Criar request com filtros
-            # params = {"data_registro": pd.Timestamp("today").strftime("%Y-%m-%d")}
+            # params = {"data_registro": today_date()}
 
             params = {
                 "data_registro__gte": DATA_ANALYSIS,
-                "data_registro__lte": pd.Timestamp("today").strftime("%Y-%m-%d"),
+                "data_registro__lte": today_date(),
             }
 
             info_view = MaquinaInfoViewSet.as_view({"get": "list"})
@@ -146,7 +151,7 @@ def create_production_data():
     """
     with lock:
         try:
-            today = pd.Timestamp("today").strftime("%Y-%m-%d")
+            today = today_date()
 
             # params = {"period": f"{today},{today}"}
             params = {"period": f"{DATA_ANALYSIS},{today}"}
@@ -198,7 +203,7 @@ def create_indicators():
     """
     with lock:
         try:
-            today = pd.Timestamp("today").strftime("%Y-%m-%d")
+            today = today_date()
             # Define os parâmetros
             # params = {"data_registro": today}
 

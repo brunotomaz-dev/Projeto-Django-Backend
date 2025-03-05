@@ -82,7 +82,7 @@ class DynamicFieldsModelSerializer(serializers.ModelSerializer):
                 self.fields.pop(field_name)
 
 
-class MaquinaInfoSerializer(serializers.ModelSerializer):
+class MaquinaInfoSerializer(DynamicFieldsModelSerializer):
     """Serializador de dados de informações de máquina"""
 
     class Meta:
@@ -144,7 +144,7 @@ class MaquinaIHMSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class InfoIHMSerializer(serializers.ModelSerializer):
+class InfoIHMSerializer(DynamicFieldsModelSerializer):
     """Serializador de dados de IHM de máquina"""
 
     class Meta:
@@ -164,7 +164,7 @@ class QualidadeIHMSerializer(serializers.ModelSerializer):
         fields = "__all__"
 
 
-class QualProdSerializer(serializers.ModelSerializer):
+class QualProdSerializer(DynamicFieldsModelSerializer):
     """Serializador de dados de produção de qualidade"""
 
     class Meta:

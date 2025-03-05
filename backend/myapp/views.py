@@ -109,7 +109,7 @@ class BasicDynamicFieldsViewSets(viewsets.ModelViewSet):
 
 
 # Create your views here.
-class MaquinaInfoViewSet(viewsets.ModelViewSet):
+class MaquinaInfoViewSet(BasicDynamicFieldsViewSets):
     """
     Exibe e edita informações de máquinas.
 
@@ -230,7 +230,7 @@ class MaquinaIHMViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class InfoIHMViewSet(viewsets.ModelViewSet):
+class InfoIHMViewSet(BasicDynamicFieldsViewSets):
     """
     Exibe e edita informações de IHM de máquinas.
 
@@ -314,7 +314,7 @@ class QualidadeIHMViewSet(viewsets.ModelViewSet):
             )
 
 
-class QualProdViewSet(viewsets.ModelViewSet):
+class QualProdViewSet(BasicDynamicFieldsViewSets):
     """
     ViewSet para gerenciamento de Produtos Qualificados (QualProd).
     Este ViewSet fornece operações CRUD completas para o modelo QualProd,
@@ -676,6 +676,114 @@ class StockOnCFViewSet(APIView):
             )
 
 
+class StockStatusViewSet(APIView):
+    """
+    Exibe informações de estoque de produtos em CF.
+    """
+
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    def get(self, _request):
+        """
+        Retorna uma lista de dados de estoque de produtos em CF.
+
+        Resposta:
+        - results: lista de dicionários com os dados de estoque
+        """
+        query = self.__build_query()
+
+        data = self.execute_query(query)
+
+        return Response(data)
+
+    @staticmethod
+    def __build_query():
+        """
+        Constrói as consultas para a API de informações de estoque de produtos em CF.
+
+        Retorna:
+        - query: consulta SQL para obter a lista de dados de estoque
+        """
+        # cSpell: words QATU LOCPAD totvsdb
+
+        # Data de hoje
+        yesterday = (pd.Timestamp.now() - pd.Timedelta(days=1)).strftime("%Y%m%d")
+
+        # Select
+        select_ = """SELECT
+            B1_DESC AS produto,
+            D3_QUANT AS quantidade,
+            D3_UM AS unidade,
+            D3_EMISSAO AS data,
+            CYV_HRRPBG AS hora
+        """
+
+        # From
+        from_ = "FROM SD3000 SD3 WITH (NOLOCK)"
+
+        # Join
+        join_ = """
+            LEFT JOIN SB1000 SB1 WITH (NOLOCK) ON B1_FILIAL='01'
+            AND B1_COD=D3_COD AND SB1.D_E_L_E_T_<>'*'
+            LEFT JOIN CYV000 CYV WITH (NOLOCK) ON CYV_FILIAL=D3_FILIAL
+            AND CYV_NRRPET=D3_IDENT AND CYV.D_E_L_E_T_<>'*'
+            LEFT JOIN CYB000 CYB WITH (NOLOCK) ON CYB_FILIAL=D3_FILIAL
+            AND CYB_CDMQ=CYV_CDMQ AND CYB.D_E_L_E_T_<>'*'
+        """
+
+        # where
+        where_ = f"""
+            WHERE
+            D3_FILIAL = '0101'
+            AND D3_LOCAL='CF'
+            AND B1_TIPO = 'PA'
+            AND D3_CF = 'PR0'
+            AND D3_ESTORNO <> 'S'
+            AND D3_EMISSAO > '{yesterday}'
+            AND SD3.D_E_L_E_T_<>'*'
+        """
+
+        # Order By
+        order_by_ = "ORDER BY D3_EMISSAO DESC, CYV_HRRPBG DESC"
+
+        query = f"{select_} {from_} {join_} {where_} {order_by_}"
+
+        return query
+
+    def execute_query(self, query):
+        """
+        Executa uma consulta SQL no banco de dados SQL Server.
+        Args:
+            query (str): Query SQL a ser executada no banco de dados.
+        Returns:
+            Response ou list:
+                - Se a query for bem sucedida: lista de dicionários com os dados
+                - Se a query for bem sucedida mas não retornar resultados:
+                    Response com lista vazia e status 200
+                - Se ocorrer erro: Response com mensagem de erro e status 500
+        Raises:
+            Exception: Captura qualquer exceção que ocorra durante a execução da query
+        """
+        try:
+            with connections["totvsdb"].cursor() as cursor:
+                cursor.execute(query)
+                rows = cursor.fetchall()
+
+                if not rows:
+                    return []
+
+                df = pd.DataFrame.from_records(rows, columns=[col[0] for col in cursor.description])
+
+                return df.to_dict("records")
+        # pylint: disable=W0718
+        except Exception as e:
+            print(f"Erro na execução da query: {str(e)}")
+            return Response(
+                {"error": f"Database error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 class CartCountViewSet(APIView):
     """
     Exibe informações de contagem de carrinhos.
@@ -698,8 +806,18 @@ class CartCountViewSet(APIView):
             )
 
         first_day, last_day = self.parse_period(period)
+
+        if not first_day or not last_day:
+            return Response(
+                {"error": "Invalid period format. Use 'YYYY-MM-DD,YYYY-MM-DD'"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         query = self.__build_query(first_day, last_day)
         data = self.execute_query(query)
+
+        if isinstance(data, dict) and "error" in data:
+            return Response(data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         if "error" in data:
             return Response(data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -794,10 +912,7 @@ class CartCountViewSet(APIView):
                 rows = cursor.fetchall()
 
                 if not rows:
-                    return Response(
-                        [],
-                        status=status.HTTP_200_OK,
-                    )
+                    return []
 
                 df = pd.DataFrame.from_records(rows, columns=[col[0] for col in cursor.description])
 

@@ -22,6 +22,7 @@ from .views import (
     RegisterView,
     RepairViewSet,
     StockOnCFViewSet,
+    StockStatusViewSet,
     change_password,
 )
 
@@ -50,5 +51,6 @@ urlpatterns = [
     ),
     path("caixas_cf/", StockOnCFViewSet.as_view(), name="caixas_cf"),
     path("cart_count/", CartCountViewSet.as_view(), name="cart_count"),
+    path("productionByDay/", StockStatusViewSet.as_view(), name="productionByDay"),
     path("", include(router.urls)),
 ]

@@ -4,7 +4,6 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
-from django.utils.timezone import make_aware
 
 from .utils import (
     AF_REP,
@@ -388,10 +387,6 @@ class InfoIHMJoin:
         # Ajustando a fabrica
         df.fabrica = df.fabrica.fillna(0).clip(lower=0).astype(int)
         df = df[df.fabrica.isin(range(1, 15))]
-
-        # ========= Ajusta A Data Hora E Data Hora Final Para O Timezone Correto Para Salvar No Db #
-        df.data_hora = df.data_hora.apply(make_aware)
-        df.data_hora_final = df.data_hora_final.apply(make_aware)
 
         # Ajusta a data de registro do IHM
         df.data_registro_ihm = df.data_registro_ihm.fillna(df.data_registro)

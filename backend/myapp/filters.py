@@ -52,7 +52,12 @@ class InfoIHMFilter(django_filters.FilterSet):
         """Classe de metadados"""
 
         model = InfoIHM
-        fields = {"data_registro": ["exact", "gt", "lt", "gte", "lte"]}
+        fields = {
+            "data_registro": ["exact", "gt", "lt", "gte", "lte"],
+            "maquina_id": ["exact"],
+            "linha": ["exact"],
+            "turno": ["exact"],
+        }
 
 
 class QualidadeIHMFilter(django_filters.FilterSet):
