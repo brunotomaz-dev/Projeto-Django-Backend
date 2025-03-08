@@ -17,6 +17,7 @@ from .views import (
     MaquinaInfoProductionViewSet,
     MaquinaInfoViewSet,
     PerformanceViewSet,
+    PresenceLogViewSet,
     QualidadeIHMViewSet,
     QualProdViewSet,
     RegisterView,
@@ -37,6 +38,8 @@ router.register(r"performance", PerformanceViewSet)
 router.register(r"repair", RepairViewSet)
 router.register(r"absenteismo", AbsenceViewSet)  # cSpell: words absenteismo
 router.register(r"maq_info_hour_prod", MaqInfoHourProductionViewSet, basename="maq_info_hour_prod")
+router.register(r"presence_log", PresenceLogViewSet)
+
 
 urlpatterns = [
     path("token/", CustomTokenObtainPairView.as_view(), name="token_obtain_pair"),

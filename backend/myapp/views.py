@@ -24,6 +24,7 @@ from .filters import (
     MaquinaIHMFilter,
     MaquinaInfoFilter,
     PerformanceFilter,
+    PresenceLogFilter,
     QualidadeIHMFilter,
     QualProdFilter,
     RepairFilter,
@@ -35,6 +36,7 @@ from .models import (
     MaquinaIHM,
     MaquinaInfo,
     Performance,
+    PresenceLog,
     QualidadeIHM,
     QualProd,
     Repair,
@@ -48,6 +50,7 @@ from .serializers import (
     MaquinaInfoHourSerializer,
     MaquinaInfoSerializer,
     PerformanceSerializer,
+    PresenceLogSerializer,
     QualidadeIHMSerializer,
     QualProdSerializer,
     RegisterSerializer,
@@ -108,6 +111,9 @@ class BasicDynamicFieldsViewSets(viewsets.ModelViewSet):
         return super().get_serializer(*args, **kwargs)
 
 
+# ================================================================================================ #
+#                                           MAQUINA INFO                                           #
+# ================================================================================================ #
 # Create your views here.
 class MaquinaInfoViewSet(BasicDynamicFieldsViewSets):
     """
@@ -181,6 +187,9 @@ class MaqInfoHourProductionViewSet(viewsets.ModelViewSet):
             )
 
 
+# ================================================================================================ #
+#                                            MÁQUINA IHM                                           #
+# ================================================================================================ #
 class MaquinaIHMViewSet(viewsets.ModelViewSet):
     """
     Exibe e edita informações de IHM de máquinas.
@@ -230,6 +239,9 @@ class MaquinaIHMViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+# ================================================================================================ #
+#                                             INFO IHM                                             #
+# ================================================================================================ #
 class InfoIHMViewSet(BasicDynamicFieldsViewSets):
     """
     Exibe e edita informações de IHM de máquinas.
@@ -250,6 +262,9 @@ class InfoIHMViewSet(BasicDynamicFieldsViewSets):
     authentication_classes = [JWTAuthentication]
 
 
+# ================================================================================================ #
+#                                             QUALIDADE                                            #
+# ================================================================================================ #
 class QualidadeIHMViewSet(viewsets.ModelViewSet):
     """
     Exibe e edita informações de qualidade de IHM de máquinas.
@@ -314,6 +329,9 @@ class QualidadeIHMViewSet(viewsets.ModelViewSet):
             )
 
 
+# ================================================================================================ #
+#                                      PRODUCTION + QUALIDADE                                      #
+# ================================================================================================ #
 class QualProdViewSet(BasicDynamicFieldsViewSets):
     """
     ViewSet para gerenciamento de Produtos Qualificados (QualProd).
@@ -342,6 +360,9 @@ class QualProdViewSet(BasicDynamicFieldsViewSets):
     authentication_classes = [JWTAuthentication]
 
 
+# ================================================================================================ #
+#                                            INDICADORES                                           #
+# ================================================================================================ #
 class EficienciaViewSet(BasicDynamicFieldsViewSets):  # cSpell: words eficiencia
     """
     ViewSet para gerenciamento de registros de Eficiência.
@@ -423,6 +444,9 @@ class RepairViewSet(BasicDynamicFieldsViewSets):
     authentication_classes = [JWTAuthentication]
 
 
+# ================================================================================================ #
+#                                            ABSENTEÍSMO                                           #
+# ================================================================================================ #
 class AbsenceViewSet(viewsets.ModelViewSet):
     """
     Um ViewSet para manipulação de operações de registro de ausências na API.
@@ -445,6 +469,39 @@ class AbsenceViewSet(viewsets.ModelViewSet):
     authentication_classes = [JWTAuthentication]
 
 
+# ================================================================================================ #
+#                                             PRESENÇAS                                            #
+# ================================================================================================ #
+class PresenceLogViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gerenciamento de registros de Presença.
+    Este ViewSet fornece operações CRUD (Create, Read, Update, Delete) para o modelo PresenceLog.
+    Inclui filtragem, autenticação JWT e requer que o usuário esteja autenticado.
+    Atributos:
+        queryset: Conjunto de dados contendo todos os registros de PresenceLog.
+        serializer_class: Classe serializadora para converter objetos PresenceLog em JSON.
+        filter_backends: Define DjangoFilterBackend como backend de filtragem.
+        filterset_class: Classe que define os campos filtráveis do modelo.
+        permission_classes: Define que apenas usuários autenticados podem acessar os endpoints.
+        authentication_classes: Utiliza autenticação JWT (JSON Web Token).
+    Métodos HTTP suportados:
+        - GET: Listar/Recuperar registros de PresenceLog
+        - POST: Criar novo registro de PresenceLog
+        - PUT/PATCH: Atualizar registro de PresenceLog existente
+        - DELETE: Remover registro de PresenceLog
+    """
+
+    queryset = PresenceLog.objects.all()  # pylint: disable=E1101
+    serializer_class = PresenceLogSerializer
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = PresenceLogFilter
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+
+# ================================================================================================ #
+#                                      MAQUINA INFO PRODUCTION                                     #
+# ================================================================================================ #
 class MaquinaInfoProductionViewSet(APIView):
     """
     Exibe informações de máquinas filtradas por período de tempo.
@@ -584,6 +641,9 @@ class MaquinaInfoProductionViewSet(APIView):
             )
 
 
+# ================================================================================================ #
+#                                            CÂMARA FRIA                                           #
+# ================================================================================================ #
 class StockOnCFViewSet(APIView):
     """
     Exibe informações de estoque de produtos em CF.
@@ -784,6 +844,9 @@ class StockStatusViewSet(APIView):
             )
 
 
+# ================================================================================================ #
+#                                       CONTAGEM DE CARRINHOS                                      #
+# ================================================================================================ #
 class CartCountViewSet(APIView):
     """
     Exibe informações de contagem de carrinhos.

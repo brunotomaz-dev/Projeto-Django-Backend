@@ -1,5 +1,7 @@
 """Módulo que serializa os dados do Django Rest Framework"""
 
+# cSpell: words serializável
+
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
@@ -12,6 +14,7 @@ from .models import (
     MaquinaIHM,
     MaquinaInfo,
     Performance,
+    PresenceLog,
     QualidadeIHM,
     QualProd,
     Repair,
@@ -211,4 +214,14 @@ class AbsenceLogSerializer(serializers.ModelSerializer):
         """Classe de Metadados"""
 
         model = AbsenceLog
+        fields = "__all__"
+
+
+class PresenceLogSerializer(serializers.ModelSerializer):
+    """Serializador dos dados de reparo"""
+
+    class Meta:
+        """Classe de Metadados"""
+
+        model = PresenceLog
         fields = "__all__"

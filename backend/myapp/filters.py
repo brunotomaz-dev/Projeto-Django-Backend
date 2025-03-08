@@ -9,6 +9,7 @@ from .models import (
     MaquinaIHM,
     MaquinaInfo,
     Performance,
+    PresenceLog,
     QualidadeIHM,
     QualProd,
     Repair,
@@ -137,4 +138,18 @@ class AbsenceLogFilter(django_filters.FilterSet):
             "nome": ["exact", "icontains"],
             "tipo": ["exact"],
             "setor": ["exact"],
+        }
+
+
+class PresenceLogFilter(django_filters.FilterSet):
+    """Filtro para registros de presença"""
+
+    data_registro = django_filters.DateFilter(field_name="data_registro")
+
+    class Meta:
+        """Classe de metadados"""
+
+        model = PresenceLog
+        fields = {
+            "data_registro": ["exact", "gt", "lt", "gte", "lte"],
         }

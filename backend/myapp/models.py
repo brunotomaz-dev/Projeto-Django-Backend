@@ -259,3 +259,25 @@ class AbsenceLog(models.Model):
 
         db_table = "analysis_absent"
         indexes = [models.Index(fields=["data_registro"])]
+
+
+class PresenceLog(models.Model):
+    """Tabela de Presença"""
+
+    recno = models.AutoField(primary_key=True)
+    panificacao = models.SmallIntegerField(null=True)
+    forno = models.SmallIntegerField(null=True)
+    pasta = models.SmallIntegerField(null=True)
+    recheio = models.SmallIntegerField(null=True)
+    embalagem = models.SmallIntegerField(null=True)
+    lideranca = models.SmallIntegerField(null=True)
+    data_registro = models.DateField()
+    hora_registro = models.TimeField()
+    turno = models.CharField(max_length=3)
+    usuario = models.CharField(max_length=50)
+
+    class Meta:
+        """Definição do nome da tabela"""
+
+        db_table = "analysis_presence"
+        indexes = [models.Index(fields=["data_registro"])]

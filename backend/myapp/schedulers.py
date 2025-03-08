@@ -102,7 +102,7 @@ def _save_processed_data(dados_processados):
             )
 
 
-DATA_ANALYSIS = "2025-03-04"
+DATA_ANALYSIS = "2025-03-06"
 
 
 def today_date():
